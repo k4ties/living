@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// livingData is used to store the data of Living entity.
 type livingData struct {
 	*entity.HealthManager
 

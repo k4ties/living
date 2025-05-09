@@ -1,6 +1,7 @@
 package living
 
 import (
+	"errors"
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/block/model"
@@ -16,8 +17,7 @@ import (
 	"time"
 )
 
-var _ = world.Entity(&Living{})
-var _ = entity.Living(&Living{})
+// TODO organize this shitcode, implement more handlers
 
 type Living struct {
 	handle *world.EntityHandle
@@ -27,7 +27,7 @@ type Living struct {
 	*livingData
 }
 
-func (l *Living) Heal(health float64, src world.HealingSource) {
+func (l *Living) Heal(health float64, _ world.HealingSource) {
 	l.AddHealth(health)
 }
 
@@ -69,7 +69,7 @@ func (l *Living) Hurt(dmg float64, src world.DamageSource) (float64, bool) {
 	return totalDamage, true
 }
 
-func (l *Living) kill(src world.DamageSource) {
+func (l *Living) kill(_ world.DamageSource) {
 	for _, viewer := range l.viewers() {
 		viewer.ViewEntityAction(l, entity.DeathAction{})
 	}
@@ -149,12 +149,12 @@ func (l *Living) SetVelocity(velocity mgl64.Vec3) {
 	}
 }
 
-func (l *Living) AddEffect(e effect.Effect) {
+func (l *Living) AddEffect(effect.Effect) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (l *Living) RemoveEffect(e effect.Type) {
+func (l *Living) RemoveEffect(effect.Type) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -172,7 +172,11 @@ func (l *Living) SetSpeed(f float64) {
 }
 
 func (l *Living) Close() error {
-	l.tx.RemoveEntity(l)
+	h := l.tx.RemoveEntity(l)
+	if h == nil {
+		// failed to remove entity
+		return errors.New("couldn't remove entity from the world")
+	}
 	return nil
 }
 
@@ -201,14 +205,14 @@ func (l *Living) EyeHeight() float64 {
 }
 
 func (l *Living) NameTag() string {
-  return l.data.Name
+	return l.data.Name
 }
 
 func (l *Living) SetNameTag(s string) {
-  l.data.Name = s
-  for _, v := range l.tx.Viewers(l.Position()) {
-    v.ViewEntityState(l)
-  }
+	l.data.Name = s
+	for _, v := range l.tx.Viewers(l.Position()) {
+		v.ViewEntityState(l)
+	}
 }
 
 // Move moves the player from one position to another in the world, by adding the delta passed to the current
